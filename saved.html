@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Saved Places | NYPetD</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<nav class="site-nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo"><div class="nav-logo-icon">🐾</div>NYPetD</a>
+    <div class="nav-links">
+      <a href="browse.html" class="nav-link">Explore</a>
+      <a href="saved.html"  class="nav-link active">Saved Places</a>
+      <div id="navRight"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="saved-page">
+  <h1 class="page-heading">Saved Places ❤️</h1>
+  <p class="page-sub" id="savedSub">Your personal collection of pet-friendly spots.</p>
+  <div class="saved-grid" id="savedGrid">
+    <div style="grid-column:1/-1" class="state-box"><div class="spin-wrap"><div class="spin"></div></div><p>Loading…</p></div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand"><h3>🐾 NYPetD</h3><p>Pet-friendly place discovery in NYC.</p></div>
+    <div class="footer-col"><h4>Explore</h4><a href="index.html">Home</a><a href="browse.html">Browse</a><a href="saved.html">Saved</a></div>
+    <div class="footer-col"><h4>Categories</h4><a href="browse.html?category=Cafe">Cafés</a><a href="browse.html?category=Park">Parks</a><a href="browse.html?category=Vet">Vets</a><a href="browse.html?category=Groomer">Groomers</a></div>
+    <div class="footer-col"><h4>About</h4><span>© 2026 NYPetD</span></div>
+  </div>
+  <div class="footer-bottom"><span>Made with ❤️ for NYC pet owners</span><span>© 2026 NYPetD</span></div>
+</footer>
+
+<div class="modal-bg" id="authModal">
+  <div class="modal-box">
+    <button class="modal-x" onclick="closeModal()">×</button>
+    <div class="modal-top"><div class="modal-emoji">🐾</div><h2>Sign In to See Saved</h2><p>Your favourites are waiting</p></div>
+    <div class="tab-row">
+      <button class="tab-btn active" data-tab="login">Sign In</button>
+      <button class="tab-btn" data-tab="reg">Register</button>
+    </div>
+    <div id="loginForm" class="tab-form">
+      <div class="form-f"><label>Email</label><input type="email" id="lEmail" placeholder="you@example.com"/></div>
+      <div class="form-f"><label>Password</label><input type="password" id="lPass" placeholder="••••••••"/></div>
+      <button class="form-sub" id="loginBtn">Sign In</button>
+      <div class="form-err" id="lErr"></div>
+    </div>
+    <div id="regForm" class="tab-form" style="display:none">
+      <div class="form-f"><label>Username</label><input type="text" id="rUser" placeholder="PupParent42"/></div>
+      <div class="form-f"><label>Email</label><input type="email" id="rEmail" placeholder="you@example.com"/></div>
+      <div class="form-f"><label>Password</label><input type="password" id="rPass" placeholder="Min. 6 characters"/></div>
+      <button class="form-sub" id="regBtn">Create Account</button>
+      <div class="form-err" id="rErr"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/demo-api.js"></script>
+<script src="js/utils.js"></script>
+<script>
+const grid = document.getElementById('savedGrid');
+const sub  = document.getElementById('savedSub');
+
+async function loadSaved() {
+  grid.innerHTML = `<div style="grid-column:1/-1" class="state-box"><div class="spin-wrap"><div class="spin"></div></div><p>Loading…</p></div>`;
+  if (!auth.ok()) {
+    grid.innerHTML = `<div style="grid-column:1/-1" class="state-box">
+      <div class="state-icon">🔐</div>
+      <h3>Sign in to see your saved places</h3>
+      <p>Create a free account to start saving.</p>
+      <br><button onclick="openModal()" style="margin-top:8px;background:var(--terracotta);color:#fff;border:none;border-radius:var(--r-pill);padding:12px 28px;font-size:14px;font-weight:600;font-family:'Jost',sans-serif;cursor:pointer">Sign In / Register</button>
+    </div>`;
+    sub.textContent=''; return;
+  }
+  try {
+    const d = await api('/saved');
+    const places = d.data||[];
+    sub.textContent = `${places.length} saved place${places.length!==1?'s':''}`;
+    if (!places.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1" class="state-box">
+        <div class="state-icon">🐾</div>
+        <h3>No saved places yet</h3>
+        <p>Browse and tap 🤍 to save places you love.</p>
+        <br><a href="browse.html" style="display:inline-block;margin-top:8px;background:var(--terracotta);color:#fff;border-radius:var(--r-pill);padding:12px 28px;font-size:14px;font-weight:600;text-decoration:none">🔍 Browse Places</a>
+      </div>`;
+      return;
+    }
+    grid.innerHTML='';
+    places.forEach(p=>{
+      const c=cfg(p.category);
+      const card=document.createElement('div');
+      card.className='saved-card';
+      card.innerHTML=`
+        <div class="saved-card-thumb">
+          ${p.imageURL
+          ? `<img src="${p.imageURL}" alt="${p.name}" style="width:100%;height:120px;object-fit:cover;border-radius:inherit;">`
+          : `<div style="background:${c.thumbBg};width:100%;height:120px;display:flex;align-items:center;justify-content:center;font-size:32px;border-radius:inherit;">${c.emoji}</div>`
+          }
+        </div>
+        <div class="saved-card-body">
+          <div class="saved-card-name">${p.name}</div>
+          <div class="saved-card-sub">${p.category} · ${p.borough}${p.rating?` · ⭐ ${p.rating}`:''}</div>
+          <div class="saved-card-btns">
+            <button class="btn-remove" data-sid="${p.savedId}">Remove</button>
+            <a class="btn-view" href="detail.html?id=${p._id}&category=${p.category}">Details →</a>
+          </div>
+        </div>`;
+      card.querySelector('.btn-remove').addEventListener('click', async e=>{
+        const sid=e.currentTarget.dataset.sid;
+        e.currentTarget.disabled=true; e.currentTarget.textContent='…';
+        try{
+          await api(`/saved/${sid}`,{method:'DELETE'});
+          toast(`${p.name} removed`);
+          loadSaved();
+        }catch(err){
+          toast(err.message||'Error','err');
+          e.currentTarget.disabled=false; e.currentTarget.textContent='Remove';
+        }
+      });
+      grid.appendChild(card);
+    });
+  } catch(e) {
+    grid.innerHTML=`<div style="grid-column:1/-1" class="state-box"><div class="state-icon">😿</div><h3>${e.message||'Error'}</h3></div>`;
+  }
+}
+
+function onLoginSuccess() { loadSaved(); }
+function onLogout()        { loadSaved(); }
+loadSaved();
+</script>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Browse | NYPetD</title>
+  <link rel="stylesheet" href="css/style.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+  <style>
+    .leaflet-popup-content-wrapper {
+      border-radius: 16px !important;
+      font-family: 'Jost', sans-serif;
+      box-shadow: 0 8px 32px rgba(61,44,30,0.15) !important;
+      border: 1.5px solid #e8dcc8;
+    }
+    .map-pop-name { font-family: 'Playfair Display', serif; font-size: 15px; font-weight: 700; color: #3d2c1e; margin-bottom: 3px; }
+    .map-pop-sub  { font-size: 12px; color: #9a7a68; margin-bottom: 8px; }
+    .map-pop-link { font-size: 13px; color: #c9664a; font-weight: 600; }
+    .map-pop-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo">
+      <div class="nav-logo-icon">🐾</div>NYPetD
+    </a>
+    <div class="nav-links">
+      <a href="browse.html" class="nav-link active">Explore</a>
+      <a href="saved.html"  class="nav-link">Saved Places</a>
+      <div id="navRight"></div>
+    </div>
+  </div>
+</nav>
+
+<div class="browse-shell">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-heading">Filters</div>
+
+    <div class="filter-group">
+      <div class="filter-group-title">Category</div>
+      <label class="check-row"><input type="checkbox" name="cat" value="Cafe"/>    <label>Café</label></label>
+      <label class="check-row"><input type="checkbox" name="cat" value="Park"/>    <label>Park</label></label>
+      <label class="check-row"><input type="checkbox" name="cat" value="Vet"/>     <label>Vet</label></label>
+      <label class="check-row"><input type="checkbox" name="cat" value="Groomer"/> <label>Groomer</label></label>
+    </div>
+
+    <div class="filter-rule"></div>
+
+    <div class="filter-group">
+      <div class="filter-group-title">Borough</div>
+      <div id="boroughList"></div>
+    </div>
+
+    <div class="filter-rule"></div>
+
+    <div class="filter-group">
+      <div class="filter-group-title">Features</div>
+      <label class="check-row"><input type="checkbox" id="fWifi"/>    <label for="fWifi">Free Wifi</label></label>
+      <label class="check-row"><input type="checkbox" id="fOutdoor"/> <label for="fOutdoor">Outdoor Seating</label></label>
+      <label class="check-row"><input type="checkbox" id="f24h"/>     <label for="f24h">Open 24 Hours</label></label>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="browse-main">
+
+    <!-- Topbar -->
+    <div class="browse-topbar">
+      <div class="search-pill">
+        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" id="searchIn" placeholder="Search by name…" autocomplete="off"/>
+      </div>
+      <div class="view-toggle">
+        <button class="view-btn active" id="btnList">List</button>
+        <button class="view-btn"        id="btnMap">Map</button>
+      </div>
+    </div>
+
+    <!-- Active pills -->
+    <div class="pills-bar" id="pillsBar"></div>
+
+    <!-- Results bar -->
+    <div class="results-bar">
+      <span class="results-count" id="resCount"></span>
+      <div class="sort-wrap">
+        <span class="sort-label">Sort by</span>
+        <select class="sort-sel" id="sortSel">
+          <option value="nearest">Nearest</option>
+          <option value="rating-high">Rating ↓</option>
+          <option value="rating-low">Rating ↑</option>
+          <option value="name-az">Name A→Z</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- List view -->
+    <div class="list-area" id="listArea">
+      <div class="places-list" id="placesList">
+        <div class="state-box"><div class="spin-wrap"><div class="spin"></div></div><p>Loading places…</p></div>
+      </div>
+    </div>
+
+    <!-- Map view -->
+    <div class="map-area" id="mapArea">
+      <div id="mapView"></div>
+    </div>
+
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand"><h3>🐾 NYPetD</h3><p>Pet-friendly place discovery in New York City.</p></div>
+    <div class="footer-col"><h4>Explore</h4><a href="index.html">Home</a><a href="browse.html">Browse</a><a href="saved.html">Saved</a></div>
+    <div class="footer-col"><h4>Categories</h4><a href="browse.html?category=Cafe">Cafés</a><a href="browse.html?category=Park">Parks</a><a href="browse.html?category=Vet">Vets</a><a href="browse.html?category=Groomer">Groomers</a></div>
+    <div class="footer-col"><h4>About</h4><span>© 2026 NYPetD</span></div>
+  </div>
+  <div class="footer-bottom"><span>Made with ❤️ for NYC pet owners</span><span>© 2026 NYPetD</span></div>
+</footer>
+
+<!-- AUTH MODAL -->
+<div class="modal-bg" id="authModal">
+  <div class="modal-box">
+    <button class="modal-x" onclick="closeModal()">×</button>
+    <div class="modal-top"><div class="modal-emoji">🐾</div><h2>Sign in to Save</h2><p>Save your favourite places</p></div>
+    <div class="tab-row">
+      <button class="tab-btn active" data-tab="login">Sign In</button>
+      <button class="tab-btn" data-tab="reg">Register</button>
+    </div>
+    <div id="loginForm" class="tab-form">
+      <div class="form-f"><label>Email</label><input type="email" id="lEmail" placeholder="you@example.com"/></div>
+      <div class="form-f"><label>Password</label><input type="password" id="lPass" placeholder="••••••••"/></div>
+      <button class="form-sub" id="loginBtn">Sign In</button>
+      <div class="form-err" id="lErr"></div>
+    </div>
+    <div id="regForm" class="tab-form" style="display:none">
+      <div class="form-f"><label>Username</label><input type="text" id="rUser" placeholder="PupParent42"/></div>
+      <div class="form-f"><label>Email</label><input type="email" id="rEmail" placeholder="you@example.com"/></div>
+      <div class="form-f"><label>Password</label><input type="password" id="rPass" placeholder="Min. 6 characters"/></div>
+      <button class="form-sub" id="regBtn">Create Account</button>
+      <div class="form-err" id="rErr"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="js/data.js"></script>
+<script src="js/demo-api.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/browse.js"></script>
+</body>
+</html>

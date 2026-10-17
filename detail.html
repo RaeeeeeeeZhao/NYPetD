@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Place Details | NYPetD</title>
+  <link rel="stylesheet" href="css/style.css"/>
+</head>
+<body>
+<nav class="site-nav">
+  <div class="nav-inner">
+    <a href="index.html" class="nav-logo"><div class="nav-logo-icon">🐾</div>NYPetD</a>
+    <div class="nav-links">
+      <a href="browse.html" class="nav-link active">Explore</a>
+      <a href="saved.html"  class="nav-link">Saved Places</a>
+      <div id="navRight"></div>
+    </div>
+  </div>
+</nav>
+
+<main class="detail-page">
+  <div class="breadcrumb">
+    <a href="browse.html">← Browse</a>
+    <span>/</span>
+    <span id="bcCat">Details</span>
+  </div>
+  <div id="detailRoot">
+    <div class="state-box"><div class="spin-wrap"><div class="spin"></div></div><p>Loading…</p></div>
+  </div>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-inner">
+    <div class="footer-brand"><h3>🐾 NYPetD</h3><p>Pet-friendly place discovery in NYC.</p></div>
+    <div class="footer-col"><h4>Explore</h4><a href="index.html">Home</a><a href="browse.html">Browse</a><a href="saved.html">Saved</a></div>
+    <div class="footer-col"><h4>Categories</h4><a href="browse.html?category=Cafe">Cafés</a><a href="browse.html?category=Park">Parks</a><a href="browse.html?category=Vet">Vets</a><a href="browse.html?category=Groomer">Groomers</a></div>
+    <div class="footer-col"><h4>About</h4><span>© 2026 NYPetD</span></div>
+  </div>
+  <div class="footer-bottom"><span>Made with ❤️ for NYC pet owners</span><span>© 2026 NYPetD</span></div>
+</footer>
+
+<div class="modal-bg" id="authModal">
+  <div class="modal-box">
+    <button class="modal-x" onclick="closeModal()">×</button>
+    <div class="modal-top"><div class="modal-emoji">🐾</div><h2>Sign in to Save</h2><p>Save your favourite places</p></div>
+    <div class="tab-row">
+      <button class="tab-btn active" data-tab="login">Sign In</button>
+      <button class="tab-btn" data-tab="reg">Register</button>
+    </div>
+    <div id="loginForm" class="tab-form">
+      <div class="form-f"><label>Email</label><input type="email" id="lEmail" placeholder="you@example.com"/></div>
+      <div class="form-f"><label>Password</label><input type="password" id="lPass" placeholder="••••••••"/></div>
+      <button class="form-sub" id="loginBtn">Sign In</button>
+      <div class="form-err" id="lErr"></div>
+    </div>
+    <div id="regForm" class="tab-form" style="display:none">
+      <div class="form-f"><label>Username</label><input type="text" id="rUser" placeholder="PupParent42"/></div>
+      <div class="form-f"><label>Email</label><input type="email" id="rEmail" placeholder="you@example.com"/></div>
+      <div class="form-f"><label>Password</label><input type="password" id="rPass" placeholder="Min. 6 characters"/></div>
+      <button class="form-sub" id="regBtn">Create Account</button>
+      <div class="form-err" id="rErr"></div>
+    </div>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/demo-api.js"></script>
+<script src="js/utils.js"></script>
+<script>
+function getBackLink() {
+  const back = new URLSearchParams(location.search).get('back');
+  if (back === 'map') {
+    return `<a href="browse.html?view=map" onclick="restoreMapPos()" style="color:var(--terracotta);font-weight:600">← Back to Map</a>`;
+  }
+  return `<a href="browse.html" style="color:var(--terracotta);font-weight:600">← Back to Browse</a>`;
+}
+
+function restoreMapPos() {
+}
+
+const params   = new URLSearchParams(location.search);
+const placeId  = params.get('id');
+const category = params.get('category');
+const root     = document.getElementById('detailRoot');
+let place = null, savedId = null;
+
+async function load() {
+  if (!placeId || !category) { root.innerHTML = notFound(); return; }
+  document.getElementById('bcCat').textContent = category;
+  try {
+    const d = await api(`/places/${category}/${placeId}`);
+    place = d.data;
+    let saved = false;
+    if (auth.ok()) {
+      try {
+        const s = await api(`/saved/check?placeId=${placeId}&category=${category}`);
+        saved = s.saved;
+        if (saved) {
+          const all = await api('/saved');
+          const e = (all.data||[]).find(p=>p._id?.toString()===placeId && p.category===category);
+          if (e) savedId = e.savedId;
+        }
+      } catch {}
+    }
+    render(place, saved);
+  } catch(e) {
+    root.innerHTML = e.status===404 ? notFound() : `<div class="state-box"><div class="state-icon">⚠️</div><h3>${e.message}</h3></div>`;
+  }
+}
+
+function notFound() {
+  return `<div class="state-box"><div class="state-icon">🔍</div><h3>Place not found</h3><p>It may have been removed.</p><br><a href="browse.html" style="color:var(--terracotta);font-weight:600">← Back to Browse</a></div>`;
+}
+
+const yn = v => v===true?'✅ Yes': v===false?'❌ No':'N/A';
+const tile = (label, val) => val ? `<div class="info-tile"><div class="info-tile-label">${label}</div><div class="info-tile-val">${val}</div></div>` : '';
+
+function render(p, saved) {
+  const c = cfg(p.category);
+  let tiles = '';
+  tiles += tile('Borough', p.borough);
+  tiles += tile('Rating', p.rating ? `⭐ ${p.rating} / 5` : null);
+  tiles += tile('Phone', p.phone ? `<a href="tel:${p.phone}" style="color:var(--terracotta)">${p.phone}</a>` : null);
+  if (p.category==='Cafe') {
+    tiles += tile('Price', p.price ? `$${p.price}` : null);
+    tiles += tile('Pet Policy', p.petPolicy);
+    tiles += tile('Free Wifi', yn(p.freeWifi));
+    tiles += tile('Outdoor Seating', yn(p.outdoorSeating));
+  }
+  if (p.category==='Park')    tiles += tile('Park Type', p.type);
+  if (p.category==='Vet')     tiles += tile('Open 24h', yn(p.open24h));
+  if (p.specialFeatures)      tiles += tile('Special Features', p.specialFeatures);
+
+  root.innerHTML = `
+    <div class="detail-card">
+      <div class="detail-thumb">
+        ${p.imageURL
+        ? `<img src="${p.imageURL}" alt="${p.name}" style="width:100%;height:220px;object-fit:cover;border-radius:inherit;">`
+        : `<div style="background:${c.thumbBg};width:100%;height:220px;display:flex;align-items:center;justify-content:center;font-size:64px;border-radius:inherit;">${c.emoji}</div>`
+        }
+      </div>
+      <div class="detail-body">
+        <span class="detail-cat-tag ${c.tag}">${c.emoji} ${p.category}</span>
+        <h1 class="detail-name">${p.name}</h1>
+        <div class="detail-addr">📍 ${p.address}</div>
+        <div style="margin-bottom:12px">${getBackLink()}</div>
+        <div class="detail-btns">
+          <button class="btn-save ${saved?'saved':''}" id="saveBtn">${saved?'❤️ Saved':'🤍 Save Place'}</button>
+          ${p.officialWebsite?`<a class="btn-web" href="${p.officialWebsite}" target="_blank" rel="noopener">🌐 Visit Website</a>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="info-grid" style="margin-top:20px">${tiles}</div>
+  `;
+  document.getElementById('saveBtn').addEventListener('click', doSave);
+}
+
+async function doSave() {
+  if (!auth.ok()) { openModal(); return; }
+  const btn = document.getElementById('saveBtn');
+  const isSaved = btn.classList.contains('saved');
+
+  if (isSaved && savedId) {
+    try {
+      btn.disabled=true;
+      await api(`/saved/${savedId}`, {method:'DELETE'});
+      savedId=null; btn.classList.remove('saved'); btn.innerHTML='🤍 Save Place';
+      toast(`${place.name} removed`);
+    } catch(e) { toast(e.message||'Error','err'); }
+    btn.disabled=false; return;
+  }
+  if (isSaved) return;
+
+  try {
+    btn.disabled=true; btn.textContent='…';
+    await api('/saved',{method:'POST',body:JSON.stringify({placeId,category})});
+    btn.classList.add('saved'); btn.innerHTML='❤️ Saved';
+    toast(`${place.name} saved!`,'ok');
+    const all = await api('/saved');
+    const e=(all.data||[]).find(p=>p._id?.toString()===placeId&&p.category===category);
+    if(e) savedId=e.savedId;
+  } catch(e) {
+    if(e.status===400){btn.classList.add('saved');btn.innerHTML='❤️ Saved';}
+    else{btn.innerHTML='🤍 Save Place';toast(e.message||'Error','err');}
+  }
+  btn.disabled=false;
+}
+
+function onLoginSuccess() { load(); }
+load();
+</script>
+</body>
+</html>
